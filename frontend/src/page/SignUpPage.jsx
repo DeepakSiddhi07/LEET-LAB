@@ -14,6 +14,8 @@ import {
 import {z} from "zod";
 import AuthImagePattern from '../components/AuthImagePattern';
 import { useAuthStore } from "../store/useAuthStore";
+import axios from 'axios';
+import { GoogleLogin } from '@react-oauth/google';
 
 const SignUpSchema = z.object({
   email:z.string().email("Enter a valid email"),
@@ -160,6 +162,16 @@ const SignUpPage = () => {
               )}
             </button>
           </form>
+          <GoogleLogin
+  onSuccess={async (credentialResponse) => {
+    const token = credentialResponse.credential;
+    const res = await axios.post("http://localhost:8000/api/v1/auth/google-login", { token }, {
+      withCredentials: true,
+    });
+    console.log(res.data); // user + jwt
+  }}
+  onError={() => console.log('Login Failed')}
+/>
 
           {/* Footer */}
           <div className="text-center">

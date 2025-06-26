@@ -13,21 +13,25 @@ import {
 
 import {z} from "zod";
 import AuthImagePattern from '../components/AuthImagePattern';
-import { useAuthStore } from "../store/useAuthStore";
+import { useAuthStore } from '../store/useAuthStore';
+import { GoogleLogin } from '@react-oauth/google';
+import axios from 'axios';
+
 
 const LoginSchema = z.object({
   email:z.string().email("Enter a valid email"),
   password:z.string().min(6 , "Password must be atleast of 6 characters"),
+
 })
+
 
 const LoginPage = () => {
 
+  const {isLoggingIn , login  } = useAuthStore()
   const [showPassword , setShowPassword] = useState(false);
 
-  const {login , isLoginInProgress} = useAuthStore()
-
   const {
-    register,
+    register ,
     handleSubmit,
     formState:{errors},
   } = useForm({
@@ -35,12 +39,12 @@ const LoginPage = () => {
   })
 
   const onSubmit = async (data)=>{
-   try {
-    await login(data)
-    console.log("login data" , data)
-   } catch (error) {
-     console.error("SignUp failed:", error);
-   }
+    try {
+      await login(data)
+      
+    } catch (error) {
+      console.error("Signup failed" , error)
+    }
   }
 
 
@@ -54,7 +58,7 @@ const LoginPage = () => {
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                 <Code className="w-6 h-6 text-primary" />
               </div>
-              <h1 className="text-2xl font-bold mt-2">Welcome Back </h1>
+              <h1 className="text-2xl font-bold mt-2">Welcome Back</h1>
               <p className="text-base-content/60">Login to your account</p>
             </div>
           </div>
@@ -62,6 +66,8 @@ const LoginPage = () => {
           {/* Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
             
+           
+          
 
             {/* Email */}
             <div className="form-control">
@@ -124,17 +130,40 @@ const LoginPage = () => {
             <button
               type="submit"
               className="btn btn-primary w-full"
-                disabled={isLoginInProgress}
+              disabled={isLoggingIn}
             >
-              {isLoginInProgress ? (
+            
+              {isLoggingIn ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
                   Loading...
                 </>
               ) : (
-                "Login"
+                "Sign in"
               )}
             </button>
+            {/* Google Login Button */}
+            <h2 className="text-center my-4">or</h2>
+
+            {/* <button
+              type="button"
+              className="btn btn-secondary w-full mt-4"
+              onClick={googleLogin}
+            >
+              Login with Google
+            </button> */}
+
+<GoogleLogin
+  onSuccess={async (credentialResponse) => {
+    const token = credentialResponse.credential;
+    const res = await axios.post("http://localhost:8000/api/v1/auth/google-login", { token }, {
+      withCredentials: true,
+    });
+    console.log(res.data); // user + jwt
+  }}
+  onError={() => console.log('Login Failed')}
+/>
+
           </form>
 
           {/* Footer */}
@@ -150,10 +179,11 @@ const LoginPage = () => {
       </div>
 
        {/* Right Side - Image/Pattern */}
+     {/* Right Side - Image/Pattern */}
       <AuthImagePattern
-        title={"Welcome to our platform!"}
+        title={"Welcome back!"}
         subtitle={
-          "Sign up to access our platform and start using our services."
+          "Sign in to continue your journey with us. Don't have an account? Create one now."
         }
       />
     </div>
