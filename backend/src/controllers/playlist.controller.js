@@ -96,7 +96,7 @@ export const getPlayListDetails = async (req,res) =>{
                 message: "Playlist not found"
             })
 
-            res.status(200).json({
+        res.status(200).json({
                 success: true,
                 message: "Playlist fetched successfully",
                 playlist

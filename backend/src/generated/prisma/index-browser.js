@@ -124,6 +124,7 @@ exports.Prisma.UserScalarFieldEnum = {
   image: 'image',
   role: 'role',
   password: 'password',
+  googleId: 'googleId',
   createdAt: 'createdAt',
   updatedAt: 'updatedAt'
 };
@@ -139,6 +140,8 @@ exports.Prisma.ProblemScalarFieldEnum = {
   constraints: 'constraints',
   hints: 'hints',
   editorial: 'editorial',
+  company: 'company',
+  category: 'category',
   testcases: 'testcases',
   codeSnippets: 'codeSnippets',
   referenceSolutions: 'referenceSolutions',

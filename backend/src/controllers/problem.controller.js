@@ -17,6 +17,8 @@ export const createProblem = async (req, res) => {
     testcases,
     codeSnippets,
     referenceSolutions,
+    company,
+    category
   } = req.body;
 
   console.log("Request Body:", req.body);
@@ -37,7 +39,7 @@ export const createProblem = async (req, res) => {
 
   try {
     for (const [language, solutionCode] of Object.entries(referenceSolutions)) {
-      // Check if the language is supporded by judge0
+      // Check if the language is supported by judge0
       //  Get judge0 Language id for the current language
       const languageId = getJudge0LanguageId(language);
 
@@ -95,6 +97,8 @@ export const createProblem = async (req, res) => {
           description,
           difficulty,
           tags,
+          company,
+          category,
           examples,
           constraints,
           testcases,
@@ -121,7 +125,17 @@ export const createProblem = async (req, res) => {
 
 export const getAllProblems = async (req, res) => {
   try {
-    const problems = await db.problem.findMany()
+    const problems = await db.problem.findMany(
+      {
+        include:{
+          solvedBy:{
+            where:{
+              userId:req.user.id
+            }
+          }
+        }
+      }
+    )
 
     if(!problems || problems.length === 0)
     {
@@ -154,7 +168,6 @@ export const getProblemById = async (req, res) => {
     const problem = await db.problem.findUnique({
       where:{
         id:id
-        //  parseInt(id)
       }
     })
 
@@ -205,6 +218,7 @@ export const updateProblem = async (req, res) => {
       description,
       difficulty,
       tags,
+      company,
       examples,
       constraints,
       testcases,

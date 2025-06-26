@@ -2,13 +2,15 @@ import express from "express";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser";
 import cors from "cors"
+import passport from "passport";
+import session from "express-session";
 
 import authRoutes from "./routes/auth.routes.js";
 import problemRoutes from "./routes/problem.routes.js";
-import executeRoutes from "./routes/executeCode.routes.js";
 import executionRoutes from "./routes/executeCode.routes.js";
 import playlistRoutes from "./routes/playlist.routes.js";
 import submissionRoutes from "./routes/submission.routes.js";
+import "./passport/google.strategy.js";
 
 dotenv.config();
 
@@ -23,6 +25,16 @@ app.use(
     credentials:true
   })
 )
+// For session-based auth (optional for JWT)
+app.use(session({
+  secret: process.env.SESSION_SECRET || "my-secret",
+  resave: false,
+  saveUninitialized: false,
+}));
+// Passport init
+app.use(passport.initialize());
+app.use(passport.session()); // optional
+
 
 app.get("/", (req, res) => {
   res.send("Hello welcome to leetlab 🔥");
