@@ -177,7 +177,7 @@ export const googleLogin = async (req, res) => {
           email: payload.email,
           name: payload.name,
           image: payload.picture,
-          password: "", // Empty since it's OAuth
+          password: "", 
           role: "USER"
         },
       });
