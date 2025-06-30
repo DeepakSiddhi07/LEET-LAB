@@ -14,8 +14,9 @@ import {
 import {z} from "zod";
 import AuthImagePattern from '../components/AuthImagePattern';
 import { useAuthStore } from '../store/useAuthStore';
-import { GoogleLogin } from '@react-oauth/google';
-import axios from 'axios';
+import Goog_leLogin from '../components/GoogleLoginButton';
+// import { GoogleLogin } from '@react-oauth/google';
+// import axios from 'axios';
 
 
 const LoginSchema = z.object({
@@ -153,7 +154,7 @@ const LoginPage = () => {
               Login with Google
             </button> */}
 
-<GoogleLogin
+{/* <GoogleLogin
   onSuccess={async (credentialResponse) => {
     const token = credentialResponse.credential;
     const res = await axios.post("http://localhost:8000/api/v1/auth/google-login", { token }, {
@@ -162,7 +163,9 @@ const LoginPage = () => {
     console.log(res.data); // user + jwt
   }}
   onError={() => console.log('Login Failed')}
-/>
+/> */}
+
+        <Goog_leLogin />
 
           </form>
 

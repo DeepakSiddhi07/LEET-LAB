@@ -66,9 +66,9 @@ export const useAuthStore = create((set) => ({
         }
     },
     
-    googleLogin: () => {
-    window.location.href = "http://localhost:8000/api/v1/auth/google";
-},
+//     googleLogin: () => {
+//     window.location.href = "http://localhost:8000/api/v1/auth/google";
+// },
 
 
     logout:async ()=>{
