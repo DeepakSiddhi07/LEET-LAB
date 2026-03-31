@@ -47,13 +47,26 @@ const ProblemPage = () => {
   useEffect(() => {
     getProblemById(id);
     // getSubmissionCountForProblem(id);
-  }, [id]);
+  }, [id, getProblemById]);
+
+  // Set initial language and code when problem loads
+  useEffect(() => {
+    if (problem && problem.codeSnippets) {
+      const availableLanguages = Object.keys(problem.codeSnippets);
+      if (availableLanguages.length > 0) {
+        // If current selected language is not available, use the first available one
+        if (!availableLanguages.includes(selectedLanguage)) {
+          setSelectedLanguage(availableLanguages[0]);
+        }
+      }
+    }
+  }, [problem, selectedLanguage]);
 
   useEffect(() => {
     if (problem) {
-      setCode(
-        problem.codeSnippets?.[selectedLanguage] || submission?.sourceCode || ""
-      );
+      // Set initial code from code snippets for the selected language
+      const initialCode = problem.codeSnippets?.[selectedLanguage] || "";
+      setCode(initialCode);
       setTestCases(
         problem.testcases?.map((tc) => ({
           input: tc.input,
@@ -67,14 +80,17 @@ const ProblemPage = () => {
     if (activeTab === "submissions" && id) {
       getSubmissionForProblem(id);
     }
-  }, [activeTab, id]);
+  }, [activeTab, id, getSubmissionForProblem]);
 
   console.log("submission", submissions);
 
   const handleLanguageChange = (e) => {
     const lang = e.target.value;
     setSelectedLanguage(lang);
-    setCode(problem.codeSnippets?.[lang] || "");
+    // Set code from the problem's code snippets for the new language
+    if (problem?.codeSnippets) {
+      setCode(problem.codeSnippets[lang] || "");
+    }
   };
 
   const handleRunCode = (e) => {
@@ -111,7 +127,7 @@ const ProblemPage = () => {
               <>
                 <h3 className="text-xl font-bold mb-4">Examples:</h3>
                 {Object.entries(problem.examples).map(
-                  ([lang, example], idx) => (
+                  ([lang, example]) => (
                     <div
                       key={lang}
                       className="bg-base-200 p-6 rounded-xl mb-6 font-mono"

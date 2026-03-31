@@ -36,7 +36,7 @@ export const useProblemStore = create((set)=>({
             const res = await axiosInstance.get(`/problems/get-problem/${id}`)
 
             set({problem:res.data.problem})
-            toast.success(res.data.message)
+            // toast.success(res.data.message)
 
 
         } catch (error) {
