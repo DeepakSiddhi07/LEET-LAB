@@ -1,79 +1,93 @@
-import React , {useState} from 'react'
-import {useForm} from "react-hook-form"
-import {zodResolver} from "@hookform/resolvers/zod"
-import { Link } from 'react-router-dom'
-import {
-  Code,
-  Eye,
-  EyeOff,
-  Loader2,
-  Lock,
-  Mail,
-} from "lucide-react";
+import React, { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Link } from "react-router-dom";
+import { Code, Eye, EyeOff, Loader2, Lock, Mail, User } from "lucide-react";
+import { z } from "zod";
+import { GoogleLogin } from "@react-oauth/google";
+import axios from "axios";
 
-import {z} from "zod";
-import AuthImagePattern from '../components/AuthImagePattern';
+import AuthImagePattern from "../components/AuthImagePattern";
 import { useAuthStore } from "../store/useAuthStore";
-import axios from 'axios';
-import { GoogleLogin } from '@react-oauth/google';
 
+// ─── Validation Schema ──────────────────────────────────────
+// Zod schema ensures form data is validated on the client side
+// before making any API calls. This matches the backend requirements.
 const SignUpSchema = z.object({
-  email:z.string().email("Enter a valid email"),
-  password:z.string().min(6 , "Password must be atleast of 6 characters"),
-  name:z.string().min(3 , "Name must be atleast 3 character")
-})
+  name: z
+    .string()
+    .min(3, "Name must be at least 3 characters")
+    .max(50, "Name must be at most 50 characters"),
+  email: z.string().email("Please enter a valid email address"),
+  password: z
+    .string()
+    .min(6, "Password must be at least 6 characters")
+    .max(128, "Password must be at most 128 characters"),
+});
 
 const SignUpPage = () => {
+  // ─── Local State ────────────────────────────────────────
+  const [showPassword, setShowPassword] = useState(false);
 
-  const [showPassword , setShowPassword] = useState(false);
+  // ─── Auth Store ─────────────────────────────────────────
+  // `signup` sends { name, email, password } to POST /auth/register
+  // `isSigningUp` disables the button + shows a spinner while in-flight
+  const { signup, isSigningUp } = useAuthStore();
 
-  const {signup , isSigninUp} = useAuthStore()
-
+  // ─── React Hook Form ───────────────────────────────────
   const {
     register,
     handleSubmit,
-    formState:{errors},
+    formState: { errors },
   } = useForm({
-    resolver:zodResolver(SignUpSchema)
-  })
+    resolver: zodResolver(SignUpSchema),
+  });
 
-  const onSubmit = async (data)=>{
-    console.log("data" , data)
+  /**
+   * onSubmit
+   * Called after Zod validation passes. Sends the validated
+   * form data to the auth store's signup action.
+   *
+   * @param {Object} data - Validated form data { name, email, password }
+   */
+  const onSubmit = async (data) => {
     try {
-    await signup(data)
-    console.log("signup data" , data)
+      await signup(data);
     } catch (error) {
-    console.error("SignUp failed:", error);
+      // Error toast is already handled inside the signup store action.
+      // This catch is a safety net for unexpected errors.
+      console.error("Signup failed:", error);
     }
-  }
-
+  };
 
   return (
-    <div className='h-screen grid lg:grid-cols-2'>
-        <div className="flex flex-col justify-center items-center p-6 sm:p-12">
+    <div className="h-screen grid lg:grid-cols-2">
+      {/* ─── Left Side: Sign-Up Form ─────────────────────── */}
+      <div className="flex flex-col justify-center items-center p-6 sm:p-12">
         <div className="w-full max-w-md space-y-8">
-          {/* Logo */}
+          {/* Logo & Title */}
           <div className="text-center mb-8">
             <div className="flex flex-col items-center gap-2 group">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                 <Code className="w-6 h-6 text-primary" />
               </div>
-              <h1 className="text-2xl font-bold mt-2">Welcome </h1>
-              <p className="text-base-content/60">Sign Up to your account</p>
+              <h1 className="text-2xl font-bold mt-2">Create Account</h1>
+              <p className="text-base-content/60">
+                Sign up to start solving problems
+              </p>
             </div>
           </div>
 
-          {/* Form */}
+          {/* Registration Form */}
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-            
-            {/* name */}
+            {/* Name Field */}
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">Name</span>
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Code className="h-5 w-5 text-base-content/40" />
+                  <User className="h-5 w-5 text-base-content/40" />
                 </div>
                 <input
                   type="text"
@@ -85,11 +99,13 @@ const SignUpPage = () => {
                 />
               </div>
               {errors.name && (
-                <p className="text-red-500 text-sm mt-1">{errors.name.message}</p>
-              )}              
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.name.message}
+                </p>
+              )}
             </div>
 
-            {/* Email */}
+            {/* Email Field */}
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">Email</span>
@@ -108,11 +124,13 @@ const SignUpPage = () => {
                 />
               </div>
               {errors.email && (
-                <p className="text-red-500 text-sm mt-1">{errors.email.message}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.email.message}
+                </p>
               )}
             </div>
 
-            {/* Password */}
+            {/* Password Field */}
             <div className="form-control">
               <label className="label">
                 <span className="label-text font-medium">Password</span>
@@ -142,7 +160,9 @@ const SignUpPage = () => {
                 </button>
               </div>
               {errors.password && (
-                <p className="text-red-500 text-sm mt-1">{errors.password.message}</p>
+                <p className="text-red-500 text-sm mt-1">
+                  {errors.password.message}
+                </p>
               )}
             </div>
 
@@ -150,30 +170,37 @@ const SignUpPage = () => {
             <button
               type="submit"
               className="btn btn-primary w-full"
-              disabled={isSigninUp}
+              disabled={isSigningUp}
             >
-                {isSigninUp ? (
+              {isSigningUp ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
-                  Loading...
+                  Creating account...
                 </>
               ) : (
-                "Sign in"
+                "Sign Up"
               )}
             </button>
           </form>
-          <GoogleLogin
-  onSuccess={async (credentialResponse) => {
-    const token = credentialResponse.credential;
-    const res = await axios.post("http://localhost:8000/api/v1/auth/google-login", { token }, {
-      withCredentials: true,
-    });
-    console.log(res.data); // user + jwt
-  }}
-  onError={() => console.log('Login Failed')}
-/>
 
-          {/* Footer */}
+          {/* Google OAuth - signup via Google ID token */}
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              const token = credentialResponse.credential;
+              const res = await axios.post(
+                "http://localhost:8000/api/v1/auth/google-login",
+                { token },
+                { withCredentials: true }
+              );
+              // Google login auto-creates the account if it doesn't exist
+              if (res.data.user) {
+                useAuthStore.getState().checkAuth();
+              }
+            }}
+            onError={() => console.error("Google Sign-Up Failed")}
+          />
+
+          {/* Navigation to Login */}
           <div className="text-center">
             <p className="text-base-content/60">
               Already have an account?{" "}
@@ -185,7 +212,7 @@ const SignUpPage = () => {
         </div>
       </div>
 
-       {/* Right Side - Image/Pattern */}
+      {/* ─── Right Side: Decorative Pattern ──────────────── */}
       <AuthImagePattern
         title={"Welcome to our platform!"}
         subtitle={
@@ -193,7 +220,7 @@ const SignUpPage = () => {
         }
       />
     </div>
-  )
-}
+  );
+};
 
-export default SignUpPage
+export default SignUpPage;
