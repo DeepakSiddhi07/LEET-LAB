@@ -15,7 +15,7 @@ problemRoutes.put("/update-problem/:id",authMiddleware,checkAdmin,updateProblem)
 
 problemRoutes.delete("/delete-problem/:id",authMiddleware,checkAdmin,deleteProblem);
 
-problemRoutes.get("get-solved-problems",authMiddleware,getAllProblemsSolveByUser);
+problemRoutes.get("/get-solved-problems",authMiddleware,getAllProblemsSolveByUser);
 
 
 

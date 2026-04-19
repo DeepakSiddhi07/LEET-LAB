@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuthStore } from "../store/useAuthStore";
+import { useSubmissionStore } from "../store/useSubmissionStore";
+import { usePlaylistStore } from "../store/usePlaylistStore";
+import { useProblemStore } from "../store/useProblemStore";
 import {
   User,
   Mail,
@@ -13,24 +16,49 @@ import {
   Camera,
   Save,
   X,
+  Loader,
 } from "lucide-react";
 import { format } from "date-fns";
+import { Link } from "react-router-dom";
 
+/**
+ * Profile Page
+ *
+ * Key fix: Previously this page showed HARDCODED mock data for
+ * Recent Submissions ("Two Sum"), Playlists ("Array Problems"),
+ * and all stats. Now it fetches real data from the API on mount
+ * using existing Zustand stores.
+ */
 const Profile = () => {
   const { authUser } = useAuthStore();
+  const {
+    submissions,
+    getAllSubmissions,
+    isLoading: isSubmissionsLoading,
+  } = useSubmissionStore();
+  const {
+    playlists,
+    getAllPlaylists,
+    isLoading: isPlaylistsLoading,
+  } = usePlaylistStore();
+  const {
+    solvedProblems,
+    getSolvedProblemByUser,
+  } = useProblemStore();
+
   const [isEditing, setIsEditing] = useState(false);
   const [editForm, setEditForm] = useState({
     name: "",
     email: "",
     image: "",
   });
-  const [stats, setStats] = useState({
-    totalProblems: 0,
-    solvedProblems: 0,
-    totalSubmissions: 0,
-    playlists: 0,
-    successRate: 0,
-  });
+
+  // ─── Fetch real data on mount ──────────────────────────────────────
+  useEffect(() => {
+    getAllSubmissions();
+    getAllPlaylists();
+    getSolvedProblemByUser();
+  }, [getAllSubmissions, getAllPlaylists, getSolvedProblemByUser]);
 
   useEffect(() => {
     if (authUser) {
@@ -39,24 +67,23 @@ const Profile = () => {
         email: authUser.email || "",
         image: authUser.image || "",
       });
-
-      // Mock stats - in real app, fetch from API
-      setStats({
-        totalProblems: authUser.problems?.length || 0,
-        solvedProblems: authUser.problemSolved?.length || 0,
-        totalSubmissions: authUser.submission?.length || 0,
-        playlists: authUser.playlists?.length || 0,
-        successRate:
-          authUser.submission?.length > 0
-            ? Math.round(
-                ((authUser.problemSolved?.length || 0) /
-                  authUser.submission.length) *
-                  100
-              )
-            : 0,
-      });
     }
   }, [authUser]);
+
+  // ─── Compute stats from real data ─────────────────────────────────
+  const stats = {
+    solvedProblems: solvedProblems?.length || 0,
+    totalSubmissions: submissions?.length || 0,
+    playlists: playlists?.length || 0,
+    successRate:
+      submissions?.length > 0
+        ? Math.round(
+            (submissions.filter((s) => s.status === "Accepted").length /
+              submissions.length) *
+              100
+          )
+        : 0,
+  };
 
   const handleEditToggle = () => {
     setIsEditing(!isEditing);
@@ -77,6 +104,29 @@ const Profile = () => {
 
   const getRoleBadge = (role) => {
     return role === "ADMIN" ? "badge-error" : "badge-primary";
+  };
+
+  /**
+   * Returns a human-readable relative time string like "2 hours ago".
+   * Falls back to the formatted date if the submission is older than 7 days.
+   */
+  const getTimeAgo = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diffMs = now - date;
+      const diffMinutes = Math.floor(diffMs / (1000 * 60));
+      const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffMinutes < 1) return "Just now";
+      if (diffMinutes < 60) return `${diffMinutes} minute${diffMinutes > 1 ? "s" : ""} ago`;
+      if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? "s" : ""} ago`;
+      if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+      return format(date, "MMM d, yyyy");
+    } catch {
+      return "Unknown";
+    }
   };
 
   if (!authUser) {
@@ -173,7 +223,9 @@ const Profile = () => {
                       <Calendar className="w-4 h-4" />
                       <span>
                         Member since{" "}
-                        {/* {format(new Date(authUser.createdAt), "MMMM yyyy")} */}
+                        {authUser.createdAt
+                          ? format(new Date(authUser.createdAt), "MMMM yyyy")
+                          : "N/A"}
                       </span>
                     </div>
                   </>
@@ -216,15 +268,6 @@ const Profile = () => {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="stat bg-base-200 rounded-xl shadow-lg">
-            <div className="stat-figure text-primary">
-              <Code className="w-8 h-8" />
-            </div>
-            <div className="stat-title">Problems Created</div>
-            <div className="stat-value text-primary">{stats.totalProblems}</div>
-            <div className="stat-desc">Total problems authored</div>
-          </div>
-
-          <div className="stat bg-base-200 rounded-xl shadow-lg">
             <div className="stat-figure text-success">
               <CheckCircle className="w-8 h-8" />
             </div>
@@ -252,67 +295,120 @@ const Profile = () => {
             <div className="stat-value text-warning">{stats.playlists}</div>
             <div className="stat-desc">Collections created</div>
           </div>
+
+          <div className="stat bg-base-200 rounded-xl shadow-lg">
+            <div className="stat-figure text-primary">
+              <Code className="w-8 h-8" />
+            </div>
+            <div className="stat-title">Success Rate</div>
+            <div className="stat-value text-primary">{stats.successRate}%</div>
+            <div className="stat-desc">Accepted submissions</div>
+          </div>
         </div>
 
         {/* Activity Sections */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Submissions */}
+          {/* Recent Submissions — Real Data */}
           <div className="card bg-base-200 shadow-xl">
             <div className="card-body">
               <h2 className="card-title">Recent Submissions</h2>
               <div className="space-y-3">
-                {/* Mock recent submissions */}
-                {[1, 2, 3].map((item) => (
-                  <div
-                    key={item}
-                    className="flex items-center justify-between p-3 bg-base-100 rounded-lg"
-                  >
-                    <div>
-                      <p className="font-semibold">Two Sum</p>
-                      <p className="text-sm text-gray-500">
-                        Submitted 2 hours ago
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="badge badge-success">Accepted</span>
-                      <span className="text-green-500 font-semibold">EASY</span>
-                    </div>
+                {isSubmissionsLoading ? (
+                  <div className="flex justify-center py-6">
+                    <Loader className="w-6 h-6 animate-spin" />
                   </div>
-                ))}
-                <div className="text-center">
-                  <button className="btn btn-outline btn-sm">
-                    View All Submissions
-                  </button>
-                </div>
+                ) : submissions && submissions.length > 0 ? (
+                  <>
+                    {submissions.slice(0, 5).map((sub) => (
+                      <div
+                        key={sub.id}
+                        className="flex items-center justify-between p-3 bg-base-100 rounded-lg"
+                      >
+                        <div>
+                          <p className="font-semibold">
+                            {sub.language} — {sub.status}
+                          </p>
+                          <p className="text-sm text-gray-500">
+                            Submitted {getTimeAgo(sub.createdAt)}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`badge ${
+                              sub.status === "Accepted"
+                                ? "badge-success"
+                                : "badge-error"
+                            }`}
+                          >
+                            {sub.status}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                    {submissions.length > 5 && (
+                      <div className="text-center">
+                        <span className="text-sm text-gray-500">
+                          and {submissions.length - 5} more submissions
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-center text-gray-500 py-4">
+                    No submissions yet. Start solving problems!
+                  </p>
+                )}
               </div>
             </div>
           </div>
 
-          {/* My Playlists */}
+          {/* My Playlists — Real Data */}
           <div className="card bg-base-200 shadow-xl">
             <div className="card-body">
               <h2 className="card-title">My Playlists</h2>
               <div className="space-y-3">
-                {/* Mock playlists */}
-                {[1, 2, 3].map((item) => (
-                  <div
-                    key={item}
-                    className="flex items-center justify-between p-3 bg-base-100 rounded-lg"
-                  >
-                    <div>
-                      <p className="font-semibold">Array Problems</p>
-                      <p className="text-sm text-gray-500">15 problems</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <span className="badge badge-outline">Public</span>
-                    </div>
+                {isPlaylistsLoading ? (
+                  <div className="flex justify-center py-6">
+                    <Loader className="w-6 h-6 animate-spin" />
                   </div>
-                ))}
-                <div className="text-center">
-                  <button className="btn btn-outline btn-sm">
-                    View All Playlists
-                  </button>
-                </div>
+                ) : playlists && playlists.length > 0 ? (
+                  <>
+                    {playlists.slice(0, 5).map((playlist) => (
+                      <div
+                        key={playlist.id}
+                        className="flex items-center justify-between p-3 bg-base-100 rounded-lg"
+                      >
+                        <div>
+                          <p className="font-semibold">{playlist.name}</p>
+                          <p className="text-sm text-gray-500">
+                            {playlist.problems?.length || 0} problem
+                            {(playlist.problems?.length || 0) !== 1 ? "s" : ""}
+                          </p>
+                        </div>
+                        {playlist.description && (
+                          <div className="flex gap-2">
+                            <span className="badge badge-outline text-xs">
+                              {playlist.description.length > 20
+                                ? playlist.description.slice(0, 20) + "…"
+                                : playlist.description}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                    {playlists.length > 5 && (
+                      <div className="text-center">
+                        <span className="text-sm text-gray-500">
+                          and {playlists.length - 5} more playlists
+                        </span>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-center text-gray-500 py-4">
+                    No playlists yet. Create one from the home page!
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -347,7 +443,9 @@ const Profile = () => {
                     Member Since
                   </label>
                   <p className="text-sm">
-                    {/* {format(new Date(authUser.createdAt), "PPP")} */}
+                    {authUser.createdAt
+                      ? format(new Date(authUser.createdAt), "PPP")
+                      : "N/A"}
                   </p>
                 </div>
                 <div>
@@ -355,7 +453,9 @@ const Profile = () => {
                     Last Updated
                   </label>
                   <p className="text-sm">
-                    {/* {format(new Date(authUser.updatedAt), "PPP")} */}
+                    {authUser.updatedAt
+                      ? format(new Date(authUser.updatedAt), "PPP")
+                      : "N/A"}
                   </p>
                 </div>
               </div>
